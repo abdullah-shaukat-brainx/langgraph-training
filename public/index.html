@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Advisor Chat</title>
+    <style>
+        body {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        #chat-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #input-container {
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 15px 30px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e8f5fe;
+            margin-left: 20%;
+            margin-right: 0;
+        }
+        .bot-message {
+            background-color: #f0f0f0;
+            margin-right: 20%;
+            margin-left: 0;
+        }
+        .agent-name {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+        }
+        .suggestions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .suggestion-btn {
+            padding: 8px 15px;
+            background-color: #e8f5fe;
+            border: 1px solid #3498db;
+            color: #3498db;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .suggestion-btn:hover {
+            background-color: #3498db;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Travel Advisor Chat</h1>
+        <p>Ask about destinations, sightseeing spots, and hotel recommendations!</p>
+    </div>
+
+    <div class="suggestions">
+        <button class="suggestion-btn" onclick="useSuggestion('What are some good places to visit in Japan?')">Places in Japan</button>
+        <button class="suggestion-btn" onclick="useSuggestion('Recommend me some hotels in Paris')">Hotels in Paris</button>
+        <button class="suggestion-btn" onclick="useSuggestion('What are the must-see attractions in Rome?')">Rome Attractions</button>
+        <button class="suggestion-btn" onclick="useSuggestion('Plan a 3-day trip to New York')">New York Trip Plan</button>
+    </div>
+
+    <div id="chat-container"></div>
+    <div id="loading" class="loading">Thinking...</div>
+    <div id="input-container">
+        <input type="text" id="message-input" placeholder="Ask about travel destinations, sightseeing spots, or hotels...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let threadId = Date.now().toString();
+
+        function useSuggestion(text) {
+            document.getElementById('message-input').value = text;
+            sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Display user message
+            appendMessage('User', message, 'user');
+            input.value = '';
+
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                const response = await fetch('http://localhost:5002/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message, threadId }),
+                });
+
+                const data = await response.json();
+                
+                // Hide loading indicator
+                document.getElementById('loading').style.display = 'none';
+
+                // Display bot responses
+                data.responses.forEach(msg => {
+                    appendMessage(msg.type === 'ai' ? msg.name || 'Bot' : 'Bot', msg.content, 'bot');
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                appendMessage('System', 'Error sending message', 'bot');
+            }
+        }
+
+        function appendMessage(sender, message, type) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            let agentName = '';
+            if (sender !== 'User' && sender !== 'System') {
+                agentName = `<div class="agent-name">${sender}</div>`;
+            }
+            
+            messageDiv.innerHTML = `${agentName}<div>${message}</div>`;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Initial greeting
+        appendMessage('travelAdvisor', 'Hello! I\'m your travel advisor. How can I help you plan your next trip?', 'bot');
+    </script>
+</body>
+</html> 
